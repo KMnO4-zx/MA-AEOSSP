@@ -1,3 +1,5 @@
 # MA-AEOSSP
 
-Python 3.8.13 
+Python 3.10
+
+
