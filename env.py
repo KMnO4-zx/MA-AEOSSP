@@ -1,10 +1,10 @@
-import torch
-import numpy as np
-from torch.utils.data import Dataset
-from gym.spaces import Discrete, Box, MultiDiscrete
-from ray.rllib.env import EnvContext
-
-from ray import rllib
+import torch  # 导入 PyTorch 库，用于张量计算和深度学习
+import numpy as np  # 导入 NumPy 库，用于数值计算和数组操作
+from torch.utils.data import Dataset  # 从 PyTorch 导入 Dataset 类，用于数据集的定义
+from gym.spaces import Discrete, Box, MultiDiscrete  # 从 Gym 导入离散、连续和多离散空间类
+from ray.rllib.env import EnvContext  # 从 RLlib 导入环境上下文类，用于强化学习环境的配置
+from ray import rllib  # 从 Ray 框架导入 RLlib 模块，用于强化学习算法和环境的处理
+# 设置计算设备，如果有可用的 GPU 则使用 GPU，否则使用 CPU
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 
@@ -60,7 +60,6 @@ class SatelliteENV(rllib.MultiAgentEnv):
     def step(self, action_dict):
         self.step_num += 1
         obs, reward, done, info = {}, {}, False, {}
-
         if self.step_num == 1:
             tour_before = False
         else:
@@ -74,7 +73,6 @@ class SatelliteENV(rllib.MultiAgentEnv):
             agent_new_dynamic, task_start_time, task_end_time,\
                 task_windows_start, task_windows_end \
                 = self.update_dynamic(agent_obs["dynamic"], agent_obs["static"], action, tour_before)
-
             self.instances_state = agent_new_dynamic[:, 0, :]
             obs[agent_id] = {"static": agent_obs["static"], "dynamic": agent_new_dynamic}
 
@@ -92,7 +90,6 @@ class SatelliteENV(rllib.MultiAgentEnv):
         # 当到达最大步数或者任务都执行完成后结束
         if self.step_num == self.max_steps or not mask.byte().any():
             done = True
-
         return obs, reward, done, {}
 
     def reward(self, chosen_ids):
@@ -264,19 +261,32 @@ class SatelliteENV(rllib.MultiAgentEnv):
 
 
 if __name__ == "__main__":
-    batch_size = 128
-    instances_num = 50
-    agent_num = 2
+    # 调整测试参数
+    batch_size = 16  # 批处理大小
+    instances_num = 30  # 任务数量
+    agent_num = 2  # 智能体数量
     config = {
         "batch_size": batch_size,
         "instances_num": instances_num,
-        "agent_num": 2
+        "agent_num": agent_num
     }
+
+    # 创建环境实例
     testData = SatelliteENV(config)
-    obs, r, done, info = testData.reset()
+
+    # 尝试重置环境
+    obs = testData.reset()
+    # print("环境重置成功，初始观测：", obs)
+
+    # 为每个智能体生成随机动作
     actions = {}
     for i in range(agent_num):
-        actions[i] = torch.randint(0, 51, (batch_size, ))
-    obs, r, done, info = testData.step(actions)
+        # 生成随机动作，范围在 [0, instances_num) 之间
+        actions[i] = torch.randint(0, instances_num, (batch_size,))
+    
+    # print("智能体动作：", actions)
 
-    print(f"static: {obs}\n reward: {r}\n, info: {info}")
+    # 执行一步并获取结果
+    obs, reward, done, info = testData.step(actions)
+
+    # print(f"观测: {obs}\n奖励: {reward}\n是否结束: {done}\n信息: {info}")
